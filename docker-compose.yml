@@ -1,0 +1,30 @@
+
+version: '3.8'
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/home/hpadmin/HPE-Step1X-3D/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend:/app
+      - ./output:/home/hpadmin/HPE-Step1X-3D/output
+    depends_on:
+      - backend

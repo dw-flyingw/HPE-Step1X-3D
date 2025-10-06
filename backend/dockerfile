@@ -1,0 +1,22 @@
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y python3.9 python3-pip \
+    libgl1-mesa-glx \
+    libopengl0
+
+WORKDIR /app
+ENV PYTHONPATH=/app/Step1X-3D:$PYTHONPATH
+
+COPY backend/requirements.txt .
+
+RUN pip install uv
+RUN uv pip install --system --no-cache-dir -r requirements.txt
+
+COPY Step1X-3D /app/Step1X-3D
+COPY backend/app.py .
+
+RUN ls -R /app
+RUN echo $PYTHONPATH
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
