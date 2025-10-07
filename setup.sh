@@ -36,10 +36,11 @@ echo "✅ uv $(uv --version)"
 echo ""
 echo "Step 1: Setting up backend..."
 cd backend
-uv venv
+uv venv --python python3.11
 
-# Install dependencies from pyproject.toml
-uv pip install --system \
+# Install dependencies into the venv
+source .venv/bin/activate
+uv pip install \
     fastapi \
     "uvicorn[standard]" \
     python-multipart \
@@ -53,10 +54,11 @@ echo "✅ Backend dependencies installed"
 echo ""
 echo "Step 2: Setting up frontend..."
 cd frontend
-uv venv
+uv venv --python python3.11
 
-# Install dependencies from pyproject.toml
-uv pip install --system \
+# Install dependencies into the venv
+source .venv/bin/activate
+uv pip install \
     streamlit \
     requests \
     pillow \
