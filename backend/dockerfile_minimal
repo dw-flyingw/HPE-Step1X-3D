@@ -1,0 +1,40 @@
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python and minimal dependencies
+RUN apt-get update && apt-get install -y \
+    python3.10 \
+    python3-pip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install PyTorch with CUDA
+RUN pip3 install --no-cache-dir \
+    torch==2.5.1 \
+    torchvision==0.20.1 \
+    --index-url https://download.pytorch.org/whl/cu118
+
+# Install Gradio and HuggingFace libraries
+RUN pip3 install --no-cache-dir \
+    gradio==4.44.0 \
+    transformers==4.46.3 \
+    diffusers==0.30.3 \
+    accelerate==0.33.0 \
+    pillow \
+    trimesh \
+    huggingface-hub \
+    safetensors
+
+# Create minimal app that uses HuggingFace's from_pretrained (downloads models)
+COPY backend/app_minimal.py app.py
+
+# Create output directory
+RUN mkdir -p /app/output
+
+EXPOSE 7860
+
+CMD ["python3", "app.py"]
+

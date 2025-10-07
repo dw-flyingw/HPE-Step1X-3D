@@ -1,0 +1,17 @@
+services:
+  step1x3d:
+    build:
+      context: .
+      dockerfile: backend/dockerfile_minimal
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./output:/app/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+

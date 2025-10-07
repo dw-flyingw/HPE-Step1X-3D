@@ -1,29 +1,12 @@
 # Step1X-3D Self-Hosting
 
-Self-host the [Step1X-3D](https://huggingface.co/stepfun-ai/Step1X-3D) model on your own GPU server using HuggingFace's official Space Docker images.
+Self-host the [Step1X-3D](https://huggingface.co/stepfun-ai/Step1X-3D) model using HuggingFace infrastructure.
 
 ## Quick Start
 
-### Option 1: Run HF Space Locally (Recommended) 🚀
+### ⭐ Option 1: HF Inference Endpoints (RECOMMENDED)
 
-Use the official HuggingFace Space Docker image on your GPU:
-
-```bash
-./run-hf-space.sh
-```
-
-**Benefits:**
-- ✅ Uses your local GPU
-- ✅ Pre-configured by HuggingFace
-- ✅ No dependency debugging
-- ✅ Self-hosted (no API costs)
-- ✅ 5-minute setup
-
-**See:** `RUN_HF_SPACE_LOCALLY.md`
-
-### Option 2: HF Inference Endpoints API
-
-Use HuggingFace's managed inference API from your server:
+Use HuggingFace's fully managed service:
 
 ```bash
 # Setup
@@ -45,6 +28,21 @@ cp env.example .env
 
 **See:** `HF_INFERENCE_ENDPOINTS_GUIDE.md` and `QUICKSTART_HF.md`
 
+### Option 2: Try Community Space Docker Images
+
+Some community Spaces may have Docker support:
+
+```bash
+./try-other-spaces.sh
+```
+
+This will try pulling from:
+- cavargas10/Step1X-TextureGeneration
+- minhtung/Step1X-3D
+- Others
+
+**Note:** The official stepfun-ai/Step1X-3D Space doesn't publish a Docker image.
+
 ## What's Included
 
 ```
@@ -61,16 +59,17 @@ cp env.example .env
 
 ## Requirements
 
-### For Option 1 (HF Space Docker):
+### For Option 1 (HF Endpoints):
+- HuggingFace account
+- Access token
+- Internet connection
+- ~$0.60/hour usage cost (scales to $0 when idle)
+
+### For Option 2 (Community Space Docker):
 - Docker with GPU support
 - NVIDIA GPU (8GB+ VRAM)
 - nvidia-container-toolkit
 - HuggingFace account
-
-### For Option 2 (HF Endpoints API):
-- Python 3.8+
-- HuggingFace account
-- Internet connection
 
 ## Documentation
 
@@ -90,16 +89,15 @@ We tried multiple approaches and found that using HuggingFace's official infrast
 
 ## Getting Started
 
-**Recommended:** Start with Option 1 (HF Space Docker)
+**Recommended:** Use HF Inference Endpoints
+
+See `QUICKSTART_HF.md` for step-by-step instructions.
+
+**Alternative:** Try finding a community Space with Docker support:
 
 ```bash
-# On your GPU server
-./run-hf-space.sh
+./try-other-spaces.sh
 ```
-
-Access at: `http://your-server:7860`
-
-That's it! 🎉
 
 ## Support
 
