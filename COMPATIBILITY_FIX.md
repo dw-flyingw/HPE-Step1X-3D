@@ -22,10 +22,12 @@ Updated `backend/requirements.txt` with tested, compatible versions:
 
 - **PyTorch**: 2.1.0 → 2.1.2
 - **Transformers**: latest → 4.35.2 (compatible with PyTorch 2.1.2)
-- **Diffusers**: latest → 0.27.2 (stable version)
+- **Diffusers**: latest → 0.30.3 (newer version without deprecated APIs)
 - **Accelerate**: latest → 0.25.0 (compatible version)
 - **PyTorch Lightning**: latest → 2.1.3
-- Added: `safetensors==0.4.1` and `huggingface-hub==0.20.1`
+- **Hugging Face Hub**: pinned to 0.26.2 (compatible with diffusers 0.30.3)
+- **NumPy**: constrained to <2.0.0 (PyTorch 2.1.2 not compatible with NumPy 2.x)
+- Added: `safetensors==0.4.1`
 
 ## How to Fix on Your Remote Server
 
@@ -100,8 +102,10 @@ These versions are tested and compatible:
 |---------|---------|-------|
 | PyTorch | 2.1.2 | CUDA 11.8 compatible |
 | Transformers | 4.35.2 | Compatible with PyTorch 2.1.2 |
-| Diffusers | 0.27.2 | Stable release |
+| Diffusers | 0.30.3 | No deprecated APIs, compatible with modern huggingface-hub |
 | Accelerate | 0.25.0 | Compatible with above |
+| Hugging Face Hub | 0.26.2 | Compatible with diffusers 0.30.3 |
+| NumPy | <2.0.0 | PyTorch 2.1.2 requires NumPy 1.x |
 
 ## Future Updates
 
