@@ -55,7 +55,11 @@ pip install gradio==4.44.0 \
     huggingface-hub \
     timm \
     pymeshlab \
-    "numpy<2.0.0"
+    "numpy<2.0.0" \
+    pytorch-lightning==2.4.0 \
+    opencv-python-headless \
+    jaxtyping \
+    typeguard
 
 echo ""
 echo "Step 5: Cloning Step1X-3D repository..."
