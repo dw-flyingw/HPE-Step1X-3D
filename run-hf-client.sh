@@ -46,5 +46,5 @@ echo "Press Ctrl+C to stop"
 echo ""
 
 # Run the client
-python3 client/gradio_client.py
+python3 client/hf_api_client.py
 
