@@ -62,7 +62,9 @@ uv pip install \
     streamlit \
     requests \
     pillow \
-    python-dotenv
+    python-dotenv \
+    trimesh \
+    pygltflib
 
 cd ..
 echo "✅ Frontend dependencies installed"

@@ -8,6 +8,9 @@ from PIL import Image
 import io
 import os
 from dotenv import load_dotenv
+import trimesh
+import tempfile
+import base64
 
 load_dotenv()
 
@@ -22,6 +25,9 @@ st.set_page_config(
 
 st.title("🎨 Step1X-3D: Image to 3D Model")
 st.markdown("Upload an image to generate a 3D model using AI")
+
+# Add tabs for different functionalities
+tab1, tab2 = st.tabs(["🚀 Generate 3D", "📂 View 3D Model"])
 
 # Sidebar settings
 with st.sidebar:
@@ -78,11 +84,12 @@ with st.sidebar:
     except Exception as e:
         st.error(f"❌ Backend Offline: {str(e)}")
 
-# Main content
-col1, col2 = st.columns([1, 1])
+# Tab 1: Generate 3D
+with tab1:
+    col1, col2 = st.columns([1, 1])
 
-with col1:
-    st.subheader("📤 Input Image")
+    with col1:
+        st.subheader("📤 Input Image")
     uploaded_file = st.file_uploader(
         "Upload an image",
         type=["png", "jpg", "jpeg"],
@@ -96,80 +103,189 @@ with col1:
         # Show image info
         st.caption(f"Size: {image.size[0]}x{image.size[1]} | Format: {image.format}")
 
-with col2:
-    st.subheader("📥 Generated 3D Model")
-    
-    if uploaded_file:
-        if st.button("🚀 Generate 3D Model", type="primary", use_container_width=True):
-            
-            with st.spinner(f"Generating {mode} model... This may take 30-60 seconds"):
-                try:
-                    # Prepare request
-                    files = {"image": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-                    data = {
-                        "mode": mode,
-                        "guidance_scale": guidance_scale,
-                        "num_steps": num_steps,
-                        "seed": seed
-                    }
-                    
-                    # Call backend
-                    response = requests.post(
-                        f"{BACKEND_URL}/generate",
-                        files=files,
-                        data=data,
-                        timeout=300
-                    )
-                    
-                    if response.status_code == 200:
-                        # Save and display download
-                        output_filename = f"{mode}_{seed}.glb"
+    with col2:
+        st.subheader("📥 Generated 3D Model")
+        
+        if uploaded_file:
+            if st.button("🚀 Generate 3D Model", type="primary", use_container_width=True):
+                
+                with st.spinner(f"Generating {mode} model... This may take 30-60 seconds"):
+                    try:
+                        # Prepare request
+                        files = {"image": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+                        data = {
+                            "mode": mode,
+                            "guidance_scale": guidance_scale,
+                            "num_steps": num_steps,
+                            "seed": seed
+                        }
                         
-                        st.success("✅ Generation complete!")
-                        st.download_button(
-                            label="📥 Download 3D Model (.glb)",
-                            data=response.content,
-                            file_name=output_filename,
-                            mime="model/gltf-binary",
-                            use_container_width=True
+                        # Call backend
+                        response = requests.post(
+                            f"{BACKEND_URL}/generate",
+                            files=files,
+                            data=data,
+                            timeout=300
                         )
                         
-                        # Show file info
-                        file_size = len(response.content) / 1024  # KB
-                        st.caption(f"File: {output_filename} | Size: {file_size:.1f} KB")
+                        if response.status_code == 200:
+                            # Save and display download
+                            output_filename = f"{mode}_{seed}.glb"
+                            
+                            st.success("✅ Generation complete!")
+                            st.download_button(
+                                label="📥 Download 3D Model (.glb)",
+                                data=response.content,
+                                file_name=output_filename,
+                                mime="model/gltf-binary",
+                                use_container_width=True
+                            )
+                            
+                            # Show file info
+                            file_size = len(response.content) / 1024  # KB
+                            st.caption(f"File: {output_filename} | Size: {file_size:.1f} KB")
+                        
+                        elif response.status_code == 503:
+                            st.warning("⏳ Model is loading. Please wait 30-60 seconds and try again.")
+                        
+                        elif response.status_code == 401:
+                            st.error("❌ Invalid HF token. Check backend configuration.")
+                        
+                        else:
+                            error_detail = response.json().get("detail", "Unknown error")
+                            st.error(f"❌ Error: {error_detail}")
                     
-                    elif response.status_code == 503:
-                        st.warning("⏳ Model is loading. Please wait 30-60 seconds and try again.")
+                    except requests.exceptions.Timeout:
+                        st.error("❌ Request timeout. Try reducing inference steps.")
                     
-                    elif response.status_code == 401:
-                        st.error("❌ Invalid HF token. Check backend configuration.")
+                    except requests.exceptions.ConnectionError:
+                        st.error("❌ Cannot connect to backend. Make sure it's running on port 8000.")
                     
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
+        else:
+            st.info("👈 Upload an image to get started")
+
+# Tab 2: View 3D Models
+with tab2:
+    st.subheader("📂 Load and View 3D Models")
+    st.markdown("Upload a .glb or .obj file to view its properties")
+    
+    model_file = st.file_uploader(
+        "Upload 3D Model",
+        type=["glb", "obj"],
+        help="Upload a .glb or .obj file"
+    )
+    
+    if model_file:
+        try:
+            # Save temporarily and load with trimesh
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{model_file.name.split('.')[-1]}") as tmp:
+                tmp.write(model_file.getvalue())
+                tmp_path = tmp.name
+            
+            # Load mesh
+            mesh = trimesh.load(tmp_path)
+            
+            # Clean up temp file
+            os.unlink(tmp_path)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### 📊 Model Information")
+                
+                if hasattr(mesh, 'vertices'):
+                    st.metric("Vertices", f"{len(mesh.vertices):,}")
+                    st.metric("Faces", f"{len(mesh.faces):,}")
+                    
+                    if hasattr(mesh, 'bounds'):
+                        bounds = mesh.bounds
+                        size = bounds[1] - bounds[0]
+                        st.metric("Bounding Box", f"{size[0]:.2f} x {size[1]:.2f} x {size[2]:.2f}")
+                    
+                    if hasattr(mesh, 'is_watertight'):
+                        st.metric("Watertight", "✅ Yes" if mesh.is_watertight else "❌ No")
+                    
+                    if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'material'):
+                        st.metric("Has Material", "✅ Yes")
                     else:
-                        error_detail = response.json().get("detail", "Unknown error")
-                        st.error(f"❌ Error: {error_detail}")
+                        st.metric("Has Material", "❌ No")
                 
-                except requests.exceptions.Timeout:
-                    st.error("❌ Request timeout. Try reducing inference steps.")
+                # File info
+                file_size = len(model_file.getvalue()) / 1024  # KB
+                st.caption(f"File size: {file_size:.1f} KB")
+            
+            with col2:
+                st.markdown("### 🔄 Export Options")
                 
-                except requests.exceptions.ConnectionError:
-                    st.error("❌ Cannot connect to backend. Make sure it's running on port 8000.")
+                st.markdown("**Available formats:**")
                 
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+                # Convert and download buttons
+                if st.button("📥 Download as .glb", use_container_width=True):
+                    output = io.BytesIO()
+                    mesh.export(output, file_type='glb')
+                    st.download_button(
+                        label="💾 Save .glb",
+                        data=output.getvalue(),
+                        file_name=f"{model_file.name.split('.')[0]}.glb",
+                        mime="model/gltf-binary"
+                    )
+                
+                if st.button("📥 Download as .obj", use_container_width=True):
+                    output = io.BytesIO()
+                    mesh.export(output, file_type='obj')
+                    st.download_button(
+                        label="💾 Save .obj",
+                        data=output.getvalue(),
+                        file_name=f"{model_file.name.split('.')[0]}.obj",
+                        mime="model/obj"
+                    )
+                
+                if st.button("📥 Download as .stl", use_container_width=True):
+                    output = io.BytesIO()
+                    mesh.export(output, file_type='stl')
+                    st.download_button(
+                        label="💾 Save .stl",
+                        data=output.getvalue(),
+                        file_name=f"{model_file.name.split('.')[0]}.stl",
+                        mime="model/stl"
+                    )
+            
+            # Show mesh preview info
+            st.markdown("---")
+            with st.expander("📐 Detailed Mesh Information"):
+                st.json({
+                    "vertices": len(mesh.vertices) if hasattr(mesh, 'vertices') else "N/A",
+                    "faces": len(mesh.faces) if hasattr(mesh, 'faces') else "N/A",
+                    "is_watertight": mesh.is_watertight if hasattr(mesh, 'is_watertight') else "N/A",
+                    "has_normals": hasattr(mesh, 'vertex_normals'),
+                    "has_colors": hasattr(mesh.visual, 'vertex_colors') if hasattr(mesh, 'visual') else False,
+                    "file_type": model_file.name.split('.')[-1].upper(),
+                })
+        
+        except Exception as e:
+            st.error(f"❌ Error loading model: {str(e)}")
     else:
-        st.info("👈 Upload an image to get started")
+        st.info("👈 Upload a .glb or .obj file to view its properties")
 
 # Footer
 st.markdown("---")
 
 with st.expander("💡 Tips & Information"):
     st.markdown("""
-    ### How to Use
+    ### Generate 3D Tab
     1. Upload a clear image of an object
     2. Choose generation mode (geometry or textured)
     3. Adjust settings if needed
     4. Click "Generate 3D Model"
     5. Download the .glb file
+    
+    ### View 3D Model Tab
+    1. Upload a .glb or .obj file
+    2. View mesh statistics (vertices, faces, etc.)
+    3. Convert between formats (.glb ↔ .obj ↔ .stl)
+    4. Download in different formats
     
     ### Generation Modes
     - **Geometry Only**: Fast (~30-60 sec), untextured mesh
@@ -181,12 +297,10 @@ with st.expander("💡 Tips & Information"):
     - Higher inference steps = better quality but slower
     - Try different seeds for variations
     
-    ### File Format
-    The generated .glb files can be viewed in:
-    - Blender (free 3D software)
-    - Online viewers (e.g., gltf-viewer.donmccurdy.com)
-    - Three.js applications
-    - Unity/Unreal Engine
+    ### Supported 3D Formats
+    - **Load**: .glb, .obj
+    - **Export**: .glb, .obj, .stl
+    - **Viewers**: Blender, online viewers, Unity, Unreal Engine
     """)
 
 st.markdown("""
