@@ -10,3 +10,6 @@ dependencies = [
     "requests>=2.32.0",
 ]
 
+[tool.setuptools]
+py-modules = []
+

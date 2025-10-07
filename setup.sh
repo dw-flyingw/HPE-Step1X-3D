@@ -37,8 +37,16 @@ echo ""
 echo "Step 1: Setting up backend..."
 cd backend
 uv venv
-source .venv/bin/activate
-uv pip install -e .
+
+# Install dependencies from pyproject.toml
+uv pip install --system \
+    fastapi \
+    "uvicorn[standard]" \
+    python-multipart \
+    python-dotenv \
+    pillow \
+    requests
+
 cd ..
 echo "✅ Backend dependencies installed"
 
@@ -46,8 +54,14 @@ echo ""
 echo "Step 2: Setting up frontend..."
 cd frontend
 uv venv
-source .venv/bin/activate
-uv pip install -e .
+
+# Install dependencies from pyproject.toml
+uv pip install --system \
+    streamlit \
+    requests \
+    pillow \
+    python-dotenv
+
 cd ..
 echo "✅ Frontend dependencies installed"
 
