@@ -20,17 +20,17 @@ cat > backend/requirements.txt << 'REQEOF'
 fastapi
 uvicorn[standard]
 trimesh
-torch==2.1.2
-torchvision==0.16.2
-torchaudio==2.1.2
+torch==2.3.1
+torchvision==0.18.1
+torchaudio==2.3.1
 diffusers==0.30.3
-transformers==4.35.2
-accelerate==0.25.0
+transformers==4.42.4
+accelerate==0.33.0
 bitsandbytes
 python-multipart
 Jinja2
 einops
-pytorch-lightning==2.1.3
+pytorch-lightning==2.3.3
 omegaconf
 jaxtyping
 typeguard
@@ -43,16 +43,18 @@ onnxruntime
 beautifulsoup4
 python-dotenv
 safetensors==0.4.1
-huggingface-hub==0.26.2
+huggingface-hub==0.24.5
 numpy<2.0.0
 REQEOF
 
 echo "✓ Updated requirements.txt with compatible versions"
 echo ""
 echo "Changes:"
-echo "  - PyTorch: 2.1.0 → 2.1.2"
-echo "  - Transformers: latest → 4.35.2"
-echo "  - Diffusers: latest → 0.27.2"
+echo "  - PyTorch: 2.1.0 → 2.3.1 (required for Step1X-3D's torch.amp API)"
+echo "  - Transformers: latest → 4.42.4"
+echo "  - Diffusers: latest → 0.30.3"
+echo "  - Accelerate: latest → 0.33.0"
+echo "  - PyTorch Lightning: latest → 2.3.3"
 echo "  - Added specific versions for stability"
 echo ""
 

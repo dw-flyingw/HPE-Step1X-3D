@@ -20,14 +20,20 @@ This is a **version compatibility issue** between PyTorch and Transformers.
 
 Updated `backend/requirements.txt` with tested, compatible versions:
 
-- **PyTorch**: 2.1.0 → 2.1.2
-- **Transformers**: latest → 4.35.2 (compatible with PyTorch 2.1.2)
-- **Diffusers**: latest → 0.30.3 (newer version without deprecated APIs)
-- **Accelerate**: latest → 0.25.0 (compatible version)
-- **PyTorch Lightning**: latest → 2.1.3
-- **Hugging Face Hub**: pinned to 0.26.2 (compatible with diffusers 0.30.3)
-- **NumPy**: constrained to <2.0.0 (PyTorch 2.1.2 not compatible with NumPy 2.x)
+- **PyTorch**: 2.1.0 → **2.3.1** (supports `torch.amp.custom_fwd` API needed by Step1X-3D)
+- **Transformers**: latest → **4.42.4** (compatible with PyTorch 2.3.1)
+- **Diffusers**: latest → **0.30.3** (newer version without deprecated APIs)
+- **Accelerate**: latest → **0.33.0** (compatible version)
+- **PyTorch Lightning**: latest → **2.3.3** (matches PyTorch version)
+- **Hugging Face Hub**: pinned to **0.24.5** (stable, compatible version)
+- **NumPy**: constrained to <2.0.0 (avoid breaking changes)
 - Added: `safetensors==0.4.1`
+
+### Key Change: PyTorch 2.3.1
+
+The Step1X-3D codebase requires PyTorch 2.3+ because it uses:
+- `torch.amp.custom_fwd(device_type="cuda")` - New API not available in PyTorch 2.1.x
+- Modern autograd features
 
 ## How to Fix on Your Remote Server
 
@@ -100,12 +106,13 @@ These versions are tested and compatible:
 
 | Package | Version | Notes |
 |---------|---------|-------|
-| PyTorch | 2.1.2 | CUDA 11.8 compatible |
-| Transformers | 4.35.2 | Compatible with PyTorch 2.1.2 |
+| PyTorch | 2.3.1 | CUDA 11.8 compatible, supports torch.amp.custom_fwd API |
+| Transformers | 4.42.4 | Compatible with PyTorch 2.3.1 |
 | Diffusers | 0.30.3 | No deprecated APIs, compatible with modern huggingface-hub |
-| Accelerate | 0.25.0 | Compatible with above |
-| Hugging Face Hub | 0.26.2 | Compatible with diffusers 0.30.3 |
-| NumPy | <2.0.0 | PyTorch 2.1.2 requires NumPy 1.x |
+| Accelerate | 0.33.0 | Compatible with PyTorch 2.3.1 |
+| PyTorch Lightning | 2.3.3 | Matches PyTorch version |
+| Hugging Face Hub | 0.24.5 | Stable version compatible with all above |
+| NumPy | <2.0.0 | Avoid breaking changes in NumPy 2.x |
 
 ## Future Updates
 
