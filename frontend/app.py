@@ -93,33 +93,87 @@ with st.sidebar:
 
 # Tab 1: Generate 3D
 with tab1:
+    st.subheader("📤 Input")
+    
+    # Option to use prompt or upload
+    input_method = st.radio(
+        "Choose input method:",
+        ["Upload Image", "Generate from Text Prompt"],
+        horizontal=True
+    )
+    
     col1, col2 = st.columns([1, 1])
 
     with col1:
-        st.subheader("📤 Input Image")
-    uploaded_file = st.file_uploader(
-        "Upload an image",
-        type=["png", "jpg", "jpeg"],
-        help="Upload a clear image of an object to convert to 3D"
-    )
-    
-    if uploaded_file:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Input Image", use_column_width=True)
+        if input_method == "Upload Image":
+            uploaded_file = st.file_uploader(
+                "Upload an image",
+                type=["png", "jpg", "jpeg"],
+                help="Upload a clear image of an object to convert to 3D"
+            )
+            
+            if uploaded_file:
+                image = Image.open(uploaded_file)
+                st.image(image, caption="Input Image", use_column_width=True)
+                st.caption(f"Size: {image.size[0]}x{image.size[1]} | Format: {image.format}")
         
-        # Show image info
-        st.caption(f"Size: {image.size[0]}x{image.size[1]} | Format: {image.format}")
-
+        else:  # Generate from prompt
+            prompt_input = st.text_area(
+                "Describe what you want to create",
+                placeholder="e.g., a red sports car, a wooden chair, a futuristic robot...",
+                height=150,
+                key="tab1_prompt"
+            )
+            
+            if prompt_input and st.button("🎨 Generate Image", use_container_width=True, key="tab1_gen_img"):
+                with st.spinner("Generating image from prompt..."):
+                    try:
+                        response = requests.post(
+                            f"{BACKEND_URL}/text-to-image",
+                            data={"prompt": prompt_input},
+                            timeout=120
+                        )
+                        
+                        if response.status_code == 200:
+                            generated_img = Image.open(io.BytesIO(response.content))
+                            st.image(generated_img, caption="Generated Image", use_column_width=True)
+                            st.session_state['tab1_generated_image'] = response.content
+                            st.success("✅ Image ready! Generate 3D →")
+                        else:
+                            st.error(f"❌ Failed: {response.text}")
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
+            
+            # Show generated image if exists
+            if 'tab1_generated_image' in st.session_state:
+                st.image(
+                    Image.open(io.BytesIO(st.session_state['tab1_generated_image'])), 
+                    caption="Generated Image",
+                    use_column_width=True
+                )
+    
     with col2:
         st.subheader("📥 Generated 3D Model")
         
-        if uploaded_file:
-            if st.button("🚀 Generate 3D Model", type="primary", use_container_width=True):
+        # Determine which image to use
+        has_image = False
+        image_source = None
+        
+        if input_method == "Upload Image" and uploaded_file:
+            has_image = True
+            image_source = ("uploaded", uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)
+        elif input_method == "Generate from Text Prompt" and 'tab1_generated_image' in st.session_state:
+            has_image = True
+            image_source = ("generated", "generated.png", st.session_state['tab1_generated_image'], "image/png")
+        
+        if has_image:
+            if st.button("🚀 Generate 3D Model", type="primary", use_container_width=True, key="tab1_gen_3d"):
                 
                 with st.spinner(f"Generating {mode} model... This may take 30-60 seconds"):
                     try:
-                        # Prepare request
-                        files = {"image": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+                        # Prepare request with the appropriate image source
+                        _, filename, content, content_type = image_source
+                        files = {"image": (filename, content, content_type)}
                         data = {
                             "mode": mode,
                             "guidance_scale": guidance_scale,
@@ -171,7 +225,10 @@ with tab1:
                     except Exception as e:
                         st.error(f"❌ Error: {str(e)}")
         else:
-            st.info("👈 Upload an image to get started")
+            if input_method == "Upload Image":
+                st.info("👈 Upload an image to get started")
+            else:
+                st.info("👈 Enter a text prompt to generate an image first")
 
 # Tab 2: Generate from Text Prompt
 with tab2:
