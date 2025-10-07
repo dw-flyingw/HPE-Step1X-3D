@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 import trimesh
 import tempfile
 import base64
+import nibabel as nib
+import numpy as np
 
 load_dotenv()
 
@@ -27,7 +29,12 @@ st.title("🎨 Step1X-3D: Image to 3D Model")
 st.markdown("Upload an image to generate a 3D model using AI")
 
 # Add tabs for different functionalities
-tab1, tab2 = st.tabs(["🚀 Generate 3D", "📂 View 3D Model"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🚀 Generate from Image", 
+    "✍️ Generate from Prompt",
+    "🔄 Modify 3D Model",
+    "📂 View 3D Model"
+])
 
 # Sidebar settings
 with st.sidebar:
@@ -166,29 +173,195 @@ with tab1:
         else:
             st.info("👈 Upload an image to get started")
 
-# Tab 2: View 3D Models
+# Tab 2: Generate from Text Prompt
 with tab2:
+    st.subheader("✍️ Generate 3D from Text Prompt")
+    st.markdown("Enter a text description to generate an image, then create a 3D model")
+    
+    text_prompt = st.text_area(
+        "Describe what you want to create",
+        placeholder="e.g., a red sports car, a wooden chair, a futuristic robot...",
+        height=100
+    )
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if text_prompt and st.button("🎨 Generate Image from Prompt", use_container_width=True):
+            with st.spinner("Generating image from prompt..."):
+                try:
+                    response = requests.post(
+                        f"{BACKEND_URL}/text-to-image",
+                        data={"prompt": text_prompt},
+                        timeout=120
+                    )
+                    
+                    if response.status_code == 200:
+                        generated_img = Image.open(io.BytesIO(response.content))
+                        st.image(generated_img, caption="Generated Image", use_column_width=True)
+                        
+                        # Store in session state for 3D generation
+                        st.session_state['generated_image'] = response.content
+                        st.success("✅ Image generated! Now generate 3D model →")
+                    else:
+                        st.error(f"❌ Image generation failed: {response.text}")
+                
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+    
+    with col2:
+        if 'generated_image' in st.session_state:
+            st.markdown("**Generated Image Preview**")
+            st.image(Image.open(io.BytesIO(st.session_state['generated_image'])), use_column_width=True)
+            
+            if st.button("🚀 Generate 3D from This Image", use_container_width=True):
+                with st.spinner(f"Generating {mode} 3D model..."):
+                    try:
+                        files = {"image": ("generated.png", st.session_state['generated_image'], "image/png")}
+                        data = {
+                            "mode": mode,
+                            "guidance_scale": guidance_scale,
+                            "num_steps": num_steps,
+                            "seed": seed
+                        }
+                        
+                        response = requests.post(
+                            f"{BACKEND_URL}/generate",
+                            files=files,
+                            data=data,
+                            timeout=300
+                        )
+                        
+                        if response.status_code == 200:
+                            output_filename = f"prompt_{seed}.glb"
+                            st.success("✅ 3D model generated!")
+                            st.download_button(
+                                label="📥 Download 3D Model (.glb)",
+                                data=response.content,
+                                file_name=output_filename,
+                                mime="model/gltf-binary",
+                                use_container_width=True
+                            )
+                        else:
+                            st.error(f"❌ 3D generation failed")
+                    
+                    except Exception as e:
+                        st.error(f"❌ Error: {str(e)}")
+        else:
+            st.info("👈 Generate an image first")
+
+# Tab 3: Modify Existing 3D Model
+with tab3:
+    st.subheader("🔄 Modify Existing 3D Model")
+    st.markdown("Upload a 3D model and apply modifications based on a text prompt")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        existing_model = st.file_uploader(
+            "Upload 3D Model",
+            type=["glb", "obj", "nii.gz"],
+            key="modify_upload",
+            help="Upload .glb, .obj, or .nii.gz file"
+        )
+        
+        if existing_model:
+            file_ext = existing_model.name.split('.')[-1]
+            st.caption(f"Uploaded: {existing_model.name} ({file_ext.upper()})")
+            
+            modification_prompt = st.text_area(
+                "What modifications do you want to apply?",
+                placeholder="e.g., add red texture, make it smoother, add details...",
+                height=100
+            )
+    
+    with col2:
+        if existing_model:
+            # Show model info
+            st.markdown("**Model Information**")
+            
+            try:
+                # Convert to mesh for preview
+                response = requests.post(
+                    f"{BACKEND_URL}/convert-to-mesh",
+                    files={"file": (existing_model.name, existing_model.getvalue())},
+                    data={"prompt": modification_prompt} if modification_prompt else {},
+                    timeout=60
+                )
+                
+                if response.status_code == 200:
+                    st.success("✅ Model loaded successfully")
+                    
+                    if modification_prompt:
+                        st.download_button(
+                            label="📥 Download Modified Model",
+                            data=response.content,
+                            file_name=f"modified_{existing_model.name.split('.')[0]}.glb",
+                            mime="model/gltf-binary",
+                            use_container_width=True
+                        )
+                    else:
+                        st.info("Enter a modification prompt to process the model")
+                        st.download_button(
+                            label="📥 Download Converted Model (.glb)",
+                            data=response.content,
+                            file_name=f"converted_{existing_model.name.split('.')[0]}.glb",
+                            mime="model/gltf-binary",
+                            use_container_width=True
+                        )
+                else:
+                    st.error(f"❌ Conversion failed: {response.text}")
+            
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+        else:
+            st.info("👈 Upload a 3D model file")
+
+# Tab 4: View 3D Models
+with tab4:
     st.subheader("📂 Load and View 3D Models")
     st.markdown("Upload a .glb or .obj file to view its properties")
     
     model_file = st.file_uploader(
         "Upload 3D Model",
-        type=["glb", "obj"],
-        help="Upload a .glb or .obj file"
+        type=["glb", "obj", "nii.gz"],
+        key="view_upload",
+        help="Upload a .glb, .obj, or .nii.gz file"
     )
     
     if model_file:
         try:
-            # Save temporarily and load with trimesh
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{model_file.name.split('.')[-1]}") as tmp:
+            file_ext = model_file.name.split('.')[-1].lower()
+            
+            # Save temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}") as tmp:
                 tmp.write(model_file.getvalue())
                 tmp_path = tmp.name
             
-            # Load mesh
-            mesh = trimesh.load(tmp_path)
+            # Load based on file type
+            if file_ext in ['glb', 'obj']:
+                mesh = trimesh.load(tmp_path)
+            
+            elif file_ext == 'gz' and model_file.name.endswith('.nii.gz'):
+                # Load NIfTI file
+                nii_img = nib.load(tmp_path)
+                data = nii_img.get_fdata()
+                
+                # Create mesh from volume using marching cubes
+                from skimage import measure
+                threshold = data.mean() + data.std()
+                verts, faces, normals, values = measure.marching_cubes(data, threshold)
+                mesh = trimesh.Trimesh(vertices=verts, faces=faces, vertex_normals=normals)
+            
+            else:
+                st.error(f"Unsupported file type: {file_ext}")
+                mesh = None
             
             # Clean up temp file
             os.unlink(tmp_path)
+            
+            if mesh is None:
+                st.stop()
             
             col1, col2 = st.columns(2)
             
@@ -251,41 +424,68 @@ with tab2:
                         file_name=f"{model_file.name.split('.')[0]}.stl",
                         mime="model/stl"
                     )
+                
+                # Add .ply export option
+                if st.button("📥 Download as .ply", use_container_width=True):
+                    output = io.BytesIO()
+                    mesh.export(output, file_type='ply')
+                    st.download_button(
+                        label="💾 Save .ply",
+                        data=output.getvalue(),
+                        file_name=f"{model_file.name.split('.')[0]}.ply",
+                        mime="application/octet-stream"
+                    )
             
             # Show mesh preview info
             st.markdown("---")
             with st.expander("📐 Detailed Mesh Information"):
-                st.json({
+                mesh_info = {
+                    "file_name": model_file.name,
+                    "file_type": model_file.name.split('.')[-1].upper(),
                     "vertices": len(mesh.vertices) if hasattr(mesh, 'vertices') else "N/A",
                     "faces": len(mesh.faces) if hasattr(mesh, 'faces') else "N/A",
-                    "is_watertight": mesh.is_watertight if hasattr(mesh, 'is_watertight') else "N/A",
+                    "is_watertight": str(mesh.is_watertight) if hasattr(mesh, 'is_watertight') else "N/A",
                     "has_normals": hasattr(mesh, 'vertex_normals'),
                     "has_colors": hasattr(mesh.visual, 'vertex_colors') if hasattr(mesh, 'visual') else False,
-                    "file_type": model_file.name.split('.')[-1].upper(),
-                })
+                }
+                
+                # Add NIfTI-specific info
+                if model_file.name.endswith('.nii.gz'):
+                    mesh_info["original_format"] = "NIfTI (Medical Imaging)"
+                    mesh_info["converted_to_mesh"] = "Using Marching Cubes"
+                
+                st.json(mesh_info)
         
         except Exception as e:
             st.error(f"❌ Error loading model: {str(e)}")
+            import traceback
+            with st.expander("Error Details"):
+                st.code(traceback.format_exc())
     else:
-        st.info("👈 Upload a .glb or .obj file to view its properties")
+        st.info("👈 Upload a .glb, .obj, or .nii.gz file to view its properties")
 
 # Footer
 st.markdown("---")
 
 with st.expander("💡 Tips & Information"):
     st.markdown("""
-    ### Generate 3D Tab
-    1. Upload a clear image of an object
-    2. Choose generation mode (geometry or textured)
-    3. Adjust settings if needed
-    4. Click "Generate 3D Model"
-    5. Download the .glb file
+    ### 🚀 Generate from Image Tab
+    - Upload an image to create a 3D model
+    - Choose geometry (fast) or textured (detailed)
     
-    ### View 3D Model Tab
-    1. Upload a .glb or .obj file
-    2. View mesh statistics (vertices, faces, etc.)
-    3. Convert between formats (.glb ↔ .obj ↔ .stl)
-    4. Download in different formats
+    ### ✍️ Generate from Prompt Tab
+    - Enter text description → generates image → creates 3D model
+    - Two-step process: text → image → 3D
+    
+    ### 🔄 Modify 3D Model Tab
+    - Upload existing .glb, .obj, or .nii.gz file
+    - Convert between different 3D formats
+    - Apply modifications (if prompt provided)
+    
+    ### 📂 View 3D Model Tab
+    - View mesh statistics (vertices, faces, watertight, etc.)
+    - Convert between formats (.glb ↔ .obj ↔ .stl ↔ .ply)
+    - Download in different formats
     
     ### Generation Modes
     - **Geometry Only**: Fast (~30-60 sec), untextured mesh
@@ -298,9 +498,14 @@ with st.expander("💡 Tips & Information"):
     - Try different seeds for variations
     
     ### Supported 3D Formats
-    - **Load**: .glb, .obj
-    - **Export**: .glb, .obj, .stl
-    - **Viewers**: Blender, online viewers, Unity, Unreal Engine
+    - **Load**: .glb, .obj, .nii.gz (medical imaging)
+    - **Export**: .glb, .obj, .stl, .ply
+    - **Viewers**: Blender, MeshLab, online viewers, Unity, Unreal Engine
+    
+    ### NIfTI (.nii.gz) Support
+    - Medical imaging format commonly used in healthcare
+    - Automatically converts volume data to mesh using marching cubes
+    - Useful for medical visualization
     """)
 
 st.markdown("""

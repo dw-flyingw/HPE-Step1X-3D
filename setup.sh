@@ -46,7 +46,11 @@ uv pip install \
     python-multipart \
     python-dotenv \
     pillow \
-    requests
+    requests \
+    trimesh \
+    nibabel \
+    numpy \
+    scikit-image
 
 cd ..
 echo "✅ Backend dependencies installed"
@@ -64,7 +68,10 @@ uv pip install \
     pillow \
     python-dotenv \
     trimesh \
-    pygltflib
+    pygltflib \
+    nibabel \
+    numpy \
+    scikit-image
 
 cd ..
 echo "✅ Frontend dependencies installed"
