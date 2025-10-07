@@ -42,6 +42,12 @@ echo ""
 echo "Press Ctrl+C to stop"
 echo ""
 
-# Run Gradio app
-python3 backend/app_gradio.py
+# Try minimal version first (avoids data module imports)
+if [ -f "backend/app_gradio_minimal.py" ]; then
+    echo "Using minimal version (avoids training dependencies)..."
+    python3 backend/app_gradio_minimal.py
+else
+    # Fallback to full version
+    python3 backend/app_gradio.py
+fi
 
