@@ -38,13 +38,13 @@ From the project root:
 
 ```bash
 # Build and start the backend service
-docker-compose up -d backend
+docker compose up -d backend
 
 # View logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Stop the service
-docker-compose down
+docker compose down
 ```
 
 ### Using Docker Directly
@@ -128,8 +128,8 @@ chmod 777 output
 To modify the backend:
 
 1. Edit `backend/app.py`
-2. Rebuild the container: `docker-compose build backend`
-3. Restart the service: `docker-compose up -d backend`
+2. Rebuild the container: `docker compose build backend`
+3. Restart the service: `docker compose up -d backend`
 
 ## Notes
 

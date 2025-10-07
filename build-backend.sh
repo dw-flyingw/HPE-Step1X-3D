@@ -30,13 +30,37 @@ fi
 mkdir -p output
 echo "✓ Output directory created/verified"
 
+# Create .env file if it doesn't exist
+if [ ! -f .env ]; then
+    echo "Creating .env file with default configuration..."
+    cat > .env << 'EOF'
+# Backend Configuration
+BACKEND_PORT=8000
+
+# Frontend Configuration
+FRONTEND_PORT=8501
+
+# Output Directory (inside containers)
+OUTPUT_DIR=/app/output
+
+# Backend URL (for frontend to connect)
+BACKEND_URL=http://backend:8000
+
+# Optional: DICOM Viewer Port (if needed for future features)
+DICOM_VIEWER_PORT=8080
+EOF
+    echo "✓ .env file created"
+else
+    echo "✓ .env file already exists"
+fi
+
 # Build the backend image
 echo ""
 echo "Building backend Docker image..."
 echo "This may take several minutes on first build..."
 echo ""
 
-docker-compose build backend
+docker compose build backend
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -45,12 +69,12 @@ if [ $? -eq 0 ]; then
     echo "======================================"
     echo ""
     echo "To start the backend service, run:"
-    echo "  docker-compose up -d backend"
+    echo "  docker compose up -d backend"
     echo ""
     echo "To view logs:"
-    echo "  docker-compose logs -f backend"
+    echo "  docker compose logs -f backend"
     echo ""
-    echo "To test the API:"
+    echo "To test the API (replace localhost with your server IP if remote):"
     echo "  curl -X POST http://localhost:8000/generate-3d -F 'prompt=a red chair'"
     echo ""
 else
