@@ -43,7 +43,7 @@ onnxruntime
 beautifulsoup4
 python-dotenv
 safetensors==0.4.1
-huggingface-hub==0.20.1
+huggingface-hub>=0.20.2
 REQEOF
 
 echo "✓ Updated requirements.txt with compatible versions"
