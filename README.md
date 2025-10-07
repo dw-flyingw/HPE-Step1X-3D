@@ -23,102 +23,92 @@ HPE-Step1X-3D/
 ├── backend/                 # FastAPI server
 │   ├── app/                 # Application code
 │   │   ├── models/         # Pydantic models
-│   │   ├── services/       # Business logic
+│   │   ├── services/       # Business logic (GPU, Model, Mesh)
 │   │   ├── routes/         # API endpoints
-│   │   └── utils/          # Utilities
+│   │   └── config.py       # Configuration management
 │   ├── main.py             # FastAPI application
 │   └── pyproject.toml      # Backend dependencies
 ├── output/                  # Generated files
 │   ├── models/             # Generated 3D models
 │   ├── logs/               # Application logs
 │   └── temp/               # Temporary files
-├── scripts/                 # Deployment & management
-│   ├── setup.sh            # Ubuntu server setup
-│   ├── deploy.sh           # Remote deployment
-│   └── dev.sh              # Development mode
+├── scripts/                 # Management scripts (run on Ubuntu server)
+│   ├── install.sh          # First-time installation
+│   ├── update.sh           # Update after git pull
+│   ├── start.sh            # Start services
+│   ├── stop.sh             # Stop services
+│   ├── status.sh           # Check service status
+│   └── logs.sh             # View logs
 ├── docs/                    # Documentation
-└── env.example              # Environment template
+│   └── DEPLOYMENT.md       # Detailed deployment guide
+├── env.example              # Environment template
+├── QUICK_START.md          # Quick start guide
+└── README.md               # This file
 ```
 
-## 🛠️ Quick Start
+## 🎯 Quick Start
 
-### Prerequisites
-
-- Ubuntu 20.04+ server with 4x Nvidia L40 GPUs
-- NVIDIA drivers and CUDA 12.1+
-- Python 3.10+
-- HuggingFace account and token
-
-### 1. Clone and Setup
+### On Ubuntu Server (First Time)
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd HPE-Step1X-3D
+# 1. Clone repository
+git clone <your-github-repo> ~/HPE-Step1X-3D
+cd ~/HPE-Step1X-3D
 
-# Copy environment template
-cp env.example .env
+# 2. Run installation
+chmod +x scripts/*.sh
+./scripts/install.sh
 
-# Edit configuration
+# 3. Configure environment
 nano .env
-```
+# Add: HF_TOKEN=hf_your_token_here
 
-### 2. Configure Environment
-
-Edit `.env` file with your settings:
-
-```bash
-# Required: HuggingFace token
-HF_TOKEN=hf_your_token_here
-
-# GPU configuration
-CUDA_VISIBLE_DEVICES=0,1,2,3
-GPU_MEMORY_FRACTION=0.8
-
-# Server configuration
-BACKEND_HOST=0.0.0.0
-BACKEND_PORT=8000
-FRONTEND_PORT=8501
-```
-
-### 3. Deploy to Server
-
-```bash
-# Run setup script (installs everything)
-./scripts/setup.sh
-
-# Start services
+# 4. Start services
 ./scripts/start.sh
 
-# Check status
+# 5. Check status
 ./scripts/status.sh
 ```
 
-### 4. Access Application
+**Access**: http://your-server:8501
 
-- **Frontend**: http://your-server:8501
-- **Backend API**: http://your-server:8000
-- **API Documentation**: http://your-server:8000/docs
+See **[QUICK_START.md](QUICK_START.md)** for detailed workflow.
 
-## 🖥️ Development
+## 🔄 Development Workflow
 
-### Local Development
+### Git-Based Workflow
 
+This project uses a Git-based development workflow:
+
+**On MacBook (Development):**
 ```bash
-# Start both services in development mode
-./scripts/dev.sh
-
-# Or start individually
-./scripts/dev.sh backend    # Backend only
-./scripts/dev.sh frontend   # Frontend only
+# Make changes
+git add .
+git commit -m "Your changes"
+git push origin main
 ```
 
-### Development Features
+**On Ubuntu Server (Deployment):**
+```bash
+# Pull changes
+git pull origin main
 
-- Hot reload enabled
-- Debug logging
-- Auto-restart on file changes
-- Interactive debugging
+# Update and restart
+./scripts/update.sh
+```
+
+## 🛠️ Management Commands
+
+All scripts run **on the Ubuntu server**:
+
+```bash
+./scripts/install.sh    # First-time setup (installs everything)
+./scripts/update.sh     # Update after git pull
+./scripts/start.sh      # Start services
+./scripts/stop.sh       # Stop services
+./scripts/status.sh     # Check service status
+./scripts/logs.sh       # View logs
+```
 
 ## 📡 API Endpoints
 
@@ -126,37 +116,15 @@ FRONTEND_PORT=8501
 - `POST /api/v1/text-to-image` - Generate image from text
 - `POST /api/v1/generate-3d` - Generate 3D model from image
 - `POST /api/v1/convert-mesh` - Convert 3D model format
-
-### Management
-- `GET /health/` - System health check
 - `GET /api/v1/files` - List generated files
 - `GET /api/v1/download/{filename}` - Download file
 
 ### System
+- `GET /health/` - System health check
 - `GET /health/models` - Model status
 - `GET /health/gpu` - GPU information
 - `POST /health/models/load` - Load models
 - `POST /health/gpu/clear-cache` - Clear GPU cache
-
-## 🔧 Management Commands
-
-```bash
-# Service management
-./scripts/start.sh          # Start services
-./scripts/stop.sh           # Stop services
-./scripts/status.sh         # Check status
-./scripts/logs.sh           # View logs
-
-# Development
-./scripts/dev.sh            # Development mode
-./scripts/dev.sh backend    # Backend only
-./scripts/dev.sh frontend   # Frontend only
-
-# Deployment
-./scripts/deploy.sh         # Deploy to remote server
-./scripts/deploy.sh --setup-only  # Setup only
-./scripts/deploy.sh --start-only  # Start services only
-```
 
 ## 🎮 GPU Management
 
@@ -167,6 +135,13 @@ The system intelligently manages your 4x Nvidia L40 GPUs:
 - **Load Balancing**: Distributes requests across available GPUs
 - **Monitoring**: Real-time GPU usage and memory tracking
 - **Cache Management**: Automatic GPU memory cleanup
+
+Configure in `.env`:
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,3
+GPU_MEMORY_FRACTION=0.8
+MAX_CONCURRENT_REQUESTS=4
+```
 
 ## 📊 Supported Formats
 
@@ -179,13 +154,84 @@ The system intelligently manages your 4x Nvidia L40 GPUs:
 - **3D Models**: GLB, OBJ, STL, PLY
 - **Images**: PNG, JPG
 
-## 🔐 Security
+## ⚙️ Configuration
 
-- Input validation and sanitization
-- File type verification
-- Path traversal protection
-- CORS configuration
-- Error handling without information leakage
+Key environment variables in `.env`:
+
+```bash
+# Required
+HF_TOKEN=hf_your_token_here                    # From https://huggingface.co/settings/tokens
+
+# GPU Configuration
+CUDA_VISIBLE_DEVICES=0,1,2,3                   # GPUs to use
+GPU_MEMORY_FRACTION=0.8                         # Memory per GPU (0.0-1.0)
+MAX_CONCURRENT_REQUESTS=4                       # Concurrent generations
+
+# Server Configuration
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+FRONTEND_PORT=8501
+
+# Model Configuration
+STEP1X3D_MODEL_ID=stepfun-ai/Step1X-3D
+SDXL_MODEL_ID=stabilityai/stable-diffusion-xl-base-1.0
+MODEL_CACHE_DIR=./models
+
+# Logging
+LOG_LEVEL=INFO                                  # DEBUG, INFO, WARNING, ERROR
+DEBUG=False
+```
+
+## 🐛 Troubleshooting
+
+### Quick Diagnostics
+
+```bash
+# Check service status
+./scripts/status.sh
+
+# View logs
+./scripts/logs.sh
+
+# Check GPU
+nvidia-smi
+
+# Test backend
+curl http://localhost:8000/health/
+
+# Restart services
+./scripts/stop.sh && ./scripts/start.sh
+```
+
+### Common Issues
+
+**Services Won't Start:**
+```bash
+./scripts/logs.sh           # Check logs
+cat .env                    # Verify configuration
+./scripts/install.sh        # Reinstall if needed
+```
+
+**GPU Not Detected:**
+```bash
+nvidia-smi                  # Check GPU status
+nvcc --version              # Check CUDA
+sudo apt install nvidia-driver-535
+```
+
+**Models Not Loading:**
+```bash
+cat .env | grep HF_TOKEN    # Verify token
+curl -X POST http://localhost:8000/health/models/load
+./scripts/stop.sh && ./scripts/start.sh
+```
+
+**Out of Memory:**
+```bash
+# Edit .env: GPU_MEMORY_FRACTION=0.6
+curl -X POST http://localhost:8000/health/gpu/clear-cache
+./scripts/stop.sh && ./scripts/start.sh
+```
 
 ## 📈 Performance
 
@@ -195,73 +241,119 @@ The system intelligently manages your 4x Nvidia L40 GPUs:
 - **Concurrent Requests**: Multiple simultaneous generations
 - **Caching**: Model and result caching
 
-## 🐛 Troubleshooting
+### Performance Tuning
 
-### Common Issues
+For 4x L40 GPUs (48GB each):
 
-1. **GPU Not Detected**
-   ```bash
-   nvidia-smi  # Check GPU status
-   ./scripts/setup.sh  # Reinstall drivers
-   ```
+```bash
+# Conservative (stable)
+GPU_MEMORY_FRACTION=0.7
+MAX_CONCURRENT_REQUESTS=2
 
-2. **Models Not Loading**
-   ```bash
-   # Check HuggingFace token
-   cat .env | grep HF_TOKEN
-   
-   # Manually load models
-   curl -X POST http://localhost:8000/health/models/load
-   ```
+# Aggressive (maximum throughput)
+GPU_MEMORY_FRACTION=0.9
+MAX_CONCURRENT_REQUESTS=4
+```
 
-3. **Services Won't Start**
-   ```bash
-   ./scripts/status.sh  # Check service status
-   ./scripts/logs.sh    # View error logs
-   ```
+## 📚 Documentation
 
-4. **Memory Issues**
-   ```bash
-   # Clear GPU cache
-   curl -X POST http://localhost:8000/health/gpu/clear-cache
-   
-   # Reduce memory fraction in .env
-   GPU_MEMORY_FRACTION=0.6
-   ```
+- **[QUICK_START.md](QUICK_START.md)** - Quick start guide with workflow
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Detailed deployment guide
+- **API Documentation** - http://your-server:8000/docs (interactive)
+- **Health Check** - http://your-server:8000/health/
 
-### Logs
+## 🔐 Security
+
+- Input validation and sanitization
+- File type verification
+- Path traversal protection
+- CORS configuration
+- Error handling without information leakage
+
+### Firewall Setup
+
+```bash
+sudo ufw allow 8000/tcp  # Backend API
+sudo ufw allow 8501/tcp  # Frontend UI
+sudo ufw enable
+```
+
+## 🔄 Updates
+
+### Update Code from GitHub
+
+```bash
+# On Ubuntu server
+cd ~/HPE-Step1X-3D
+git pull origin main
+./scripts/update.sh
+```
+
+### Update System
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install --reinstall nvidia-driver-535
+sudo reboot  # if needed
+```
+
+## 📝 Logs
+
+### View Logs
+
+```bash
+# Application logs
+./scripts/logs.sh
+
+# Backend only
+./scripts/logs.sh backend
+
+# Frontend only
+./scripts/logs.sh frontend
+
+# System logs
+sudo journalctl -u step1x3d-backend.service -f
+```
+
+### Log Files
 
 ```bash
 # Application logs
 tail -f output/logs/backend.log
 
 # System service logs
-sudo journalctl -u step1x3d-backend.service -f
-sudo journalctl -u step1x3d-frontend.service -f
-
-# GPU monitoring
-watch -n 1 nvidia-smi
+sudo journalctl -u step1x3d-backend.service --no-pager
 ```
 
-## 🔄 Updates
+## 🎓 Usage Examples
+
+### Generate 3D from Image
 
 ```bash
-# Pull latest changes
-git pull origin main
-
-# Update dependencies
-cd backend && source .venv/bin/activate && uv pip install -e .
-cd frontend && source .venv/bin/activate && uv pip install -r requirements.txt
-
-# Restart services
-./scripts/stop.sh && ./scripts/start.sh
+curl -X POST http://localhost:8000/api/v1/generate-3d \
+  -F "image=@input.jpg" \
+  -F "mode=geometry" \
+  -F "guidance_scale=7.5" \
+  -F "num_steps=50" \
+  -F "seed=2025"
 ```
 
-## 📚 Documentation
+### Generate Image from Text
 
-- [API Documentation](http://localhost:8000/docs) - Interactive API docs
-- [Health Check](http://localhost:8000/health/) - System status
-- [GPU Monitor](http://localhost:8000/health/gpu) - GPU information
+```bash
+curl -X POST http://localhost:8000/api/v1/text-to-image \
+  -F "prompt=a red sports car" \
+  -F "width=1024" \
+  -F "height=1024"
+```
+
+### Convert 3D Model
+
+```bash
+curl -X POST http://localhost:8000/api/v1/convert-mesh \
+  -F "file=@model.obj" \
+  -F "target_format=glb"
+```
 
 ## 🤝 Contributing
 
@@ -277,11 +369,56 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🆘 Support
 
-For support and questions:
-- Check the troubleshooting section
-- Review the logs
-- Open an issue on GitHub
+For support:
+1. Check [QUICK_START.md](QUICK_START.md) for workflow
+2. Check [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for troubleshooting
+3. Run `./scripts/status.sh` to check system status
+4. View logs with `./scripts/logs.sh`
+5. Open an issue on GitHub
+
+## 🎯 System Requirements
+
+### Hardware
+- Ubuntu 20.04+ server
+- 4x Nvidia L40 GPUs (or compatible)
+- 32GB+ RAM
+- 100GB+ storage
+
+### Software
+- NVIDIA drivers 535+
+- CUDA 12.1+
+- Python 3.10+
+- Git
+
+## 🌟 Features by Tab
+
+### 🚀 Generate from Image
+- Upload images to create 3D models
+- Choose geometry (fast) or textured (detailed)
+- Configurable inference steps and guidance
+
+### ✍️ Generate from Prompt
+- Text → Image → 3D pipeline
+- Powered by Stable Diffusion XL
+- Full control over generation parameters
+
+### 🔄 Modify 3D Model
+- Upload existing 3D models
+- Convert between formats
+- Apply modifications with text prompts
+
+### 📂 View 3D Models
+- Browse generated models
+- Download in multiple formats
+- View mesh statistics
+
+### 📊 System Monitor
+- Real-time GPU monitoring
+- Model status tracking
+- System resource usage
 
 ---
 
 **Built with ❤️ for high-performance 3D model generation**
+
+For quick start, see **[QUICK_START.md](QUICK_START.md)**
