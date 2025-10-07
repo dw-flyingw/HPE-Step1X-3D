@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Step1X-3D Setup Script for Ubuntu Server
+# Step1X-3D Installation Script for Ubuntu Server
+# Run this script ON THE UBUNTU SERVER after git pull
 # This script sets up the complete environment for local GPU inference
 
 set -e
 
-echo "🚀 Setting up Step1X-3D on Ubuntu Server..."
+echo "🚀 Installing Step1X-3D on Ubuntu Server..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -88,9 +89,10 @@ if command -v nvidia-smi &> /dev/null; then
     print_success "NVIDIA drivers found"
     nvidia-smi
 else
-    print_warning "NVIDIA drivers not found. Please install NVIDIA drivers first:"
-    echo "Visit: https://developer.nvidia.com/cuda-downloads"
-    echo "Or run: sudo apt install nvidia-driver-535"
+    print_warning "NVIDIA drivers not found. Installing..."
+    sudo apt install -y nvidia-driver-535
+    print_warning "NVIDIA drivers installed. Please reboot and run this script again."
+    exit 0
 fi
 
 # Check CUDA
@@ -110,6 +112,7 @@ else
     source ~/.bashrc
     
     rm cuda_12.1.0_530.30.02_linux.run
+    print_success "CUDA installed"
 fi
 
 # Install uv for fast Python package management
@@ -121,6 +124,9 @@ if ! command -v uv &> /dev/null; then
 else
     print_success "uv already installed"
 fi
+
+# Make sure uv is in PATH for this session
+export PATH="$HOME/.cargo/bin:$PATH"
 
 # Create virtual environments
 print_status "Creating virtual environments..."
@@ -149,15 +155,19 @@ print_status "Installing Python dependencies..."
 # Backend dependencies
 cd "$PROJECT_DIR/backend"
 source .venv/bin/activate
-uv pip install --upgrade pip
+pip install --upgrade pip
+pip install uv
 uv pip install -e .
+deactivate
 print_success "Backend dependencies installed"
 
 # Frontend dependencies
 cd "$PROJECT_DIR/frontend"
 source .venv/bin/activate
-uv pip install --upgrade pip
+pip install --upgrade pip
+pip install uv
 uv pip install -r requirements.txt
+deactivate
 print_success "Frontend dependencies installed"
 
 # Create necessary directories
@@ -175,7 +185,7 @@ if [ ! -f ".env" ]; then
     print_status "Creating .env file from template..."
     cp env.example .env
     
-    print_warning "Please edit .env file with your HuggingFace token:"
+    print_warning "⚠️  IMPORTANT: Please edit .env file with your HuggingFace token:"
     echo "nano .env"
     echo ""
     echo "Required settings:"
@@ -198,8 +208,9 @@ After=network.target
 [Service]
 Type=simple
 User=$(whoami)
-WorkingDirectory=$PROJECT_DIR
-Environment=PATH=$PROJECT_DIR/backend/.venv/bin
+WorkingDirectory=$PROJECT_DIR/backend
+Environment=PATH=$PROJECT_DIR/backend/.venv/bin:/usr/local/cuda/bin:/usr/bin:/bin
+EnvironmentFile=$PROJECT_DIR/.env
 ExecStart=$PROJECT_DIR/backend/.venv/bin/python $PROJECT_DIR/backend/main.py
 Restart=always
 RestartSec=10
@@ -217,8 +228,9 @@ Requires=step1x3d-backend.service
 [Service]
 Type=simple
 User=$(whoami)
-WorkingDirectory=$PROJECT_DIR
-Environment=PATH=$PROJECT_DIR/frontend/.venv/bin
+WorkingDirectory=$PROJECT_DIR/frontend
+Environment=PATH=$PROJECT_DIR/frontend/.venv/bin:/usr/bin:/bin
+EnvironmentFile=$PROJECT_DIR/.env
 ExecStart=$PROJECT_DIR/frontend/.venv/bin/streamlit run $PROJECT_DIR/frontend/app.py --server.port 8501 --server.address 0.0.0.0
 Restart=always
 RestartSec=10
@@ -234,58 +246,6 @@ sudo systemctl enable step1x3d-frontend.service
 
 print_success "Systemd services configured"
 
-# Create helper scripts
-print_status "Creating helper scripts..."
-
-# Start script
-cat > "$PROJECT_DIR/scripts/start.sh" << 'EOF'
-#!/bin/bash
-echo "🚀 Starting Step1X-3D services..."
-sudo systemctl start step1x3d-backend.service
-sudo systemctl start step1x3d-frontend.service
-echo "✅ Services started"
-echo "Backend: http://localhost:8000"
-echo "Frontend: http://localhost:8501"
-EOF
-
-# Stop script
-cat > "$PROJECT_DIR/scripts/stop.sh" << 'EOF'
-#!/bin/bash
-echo "🛑 Stopping Step1X-3D services..."
-sudo systemctl stop step1x3d-frontend.service
-sudo systemctl stop step1x3d-backend.service
-echo "✅ Services stopped"
-EOF
-
-# Status script
-cat > "$PROJECT_DIR/scripts/status.sh" << 'EOF'
-#!/bin/bash
-echo "📊 Step1X-3D Service Status:"
-echo ""
-echo "Backend Service:"
-sudo systemctl status step1x3d-backend.service --no-pager -l
-echo ""
-echo "Frontend Service:"
-sudo systemctl status step1x3d-frontend.service --no-pager -l
-echo ""
-echo "GPU Status:"
-nvidia-smi
-EOF
-
-# Logs script
-cat > "$PROJECT_DIR/scripts/logs.sh" << 'EOF'
-#!/bin/bash
-echo "📋 Step1X-3D Logs:"
-echo ""
-echo "Backend Logs:"
-sudo journalctl -u step1x3d-backend.service -f --no-pager
-EOF
-
-# Make scripts executable
-chmod +x "$PROJECT_DIR/scripts/"*.sh
-
-print_success "Helper scripts created"
-
 # Configure firewall
 print_status "Configuring firewall..."
 if command -v ufw &> /dev/null; then
@@ -296,12 +256,19 @@ else
     print_warning "UFW not found, please configure firewall manually"
 fi
 
+# Get server IP
+SERVER_IP=$(hostname -I | awk '{print $1}')
+
 # Final setup instructions
-print_success "🎉 Setup complete!"
+print_success "🎉 Installation complete!"
 echo ""
-echo "Next steps:"
-echo "1. Edit .env file with your HuggingFace token:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📝 Next steps:"
+echo ""
+echo "1. Configure your HuggingFace token:"
 echo "   nano .env"
+echo "   # Add: HF_TOKEN=hf_your_token_here"
 echo ""
 echo "2. Start the services:"
 echo "   ./scripts/start.sh"
@@ -313,9 +280,13 @@ echo "4. View logs:"
 echo "   ./scripts/logs.sh"
 echo ""
 echo "5. Access the application:"
-echo "   Frontend: http://$(hostname -I | awk '{print $1}'):8501"
-echo "   Backend: http://$(hostname -I | awk '{print $1}'):8000"
+echo "   Frontend: http://$SERVER_IP:8501"
+echo "   Backend:  http://$SERVER_IP:8000"
+echo "   API Docs: http://$SERVER_IP:8000/docs"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "For development mode:"
 echo "   Backend: cd backend && source .venv/bin/activate && python main.py"
 echo "   Frontend: cd frontend && source .venv/bin/activate && streamlit run app.py"
+echo ""
