@@ -21,3 +21,4 @@ pytorch-lightning==2.4.0
 timm
 pymeshlab
 numpy<2.0.0
+opencv-python-headless
