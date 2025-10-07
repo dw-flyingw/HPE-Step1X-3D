@@ -1,17 +1,15 @@
 fastapi
 uvicorn
 trimesh
-torch==2.8.0
-torchvision==0.23.0
+torch==2.1.0
+torchvision==0.16.0
 diffusers
 transformers
 accelerate
 bitsandbytes
 python-multipart
 Jinja2
-trimesh
 einops
-trimesh
 pytorch-lightning
 omegaconf
 jaxtyping
@@ -23,3 +21,5 @@ wandb
 rembg
 onnxruntime
 beautifulsoup4
+python-dotenv
+fastapi-cors

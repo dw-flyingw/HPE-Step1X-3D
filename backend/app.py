@@ -1,5 +1,6 @@
 
 from fastapi import FastAPI, File, UploadFile, Form
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import torch
 from diffusers import DiffusionPipeline
@@ -8,6 +9,10 @@ from transformers import T5EncoderModel, Dinov2Model, T5Tokenizer
 from tempfile import NamedTemporaryFile
 import os
 import trimesh
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from step1x3d_geometry.models.pipelines.pipeline_utils import smart_load_model
 from diffusers.models.modeling_utils import ModelMixin
 
@@ -656,8 +661,18 @@ from typing import Iterable, Optional, Union, List
 
 app = FastAPI()
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-
+# Configure output directory
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "/app/output")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # This is a simplified version of the pipeline from the repository
 # I have removed the post-processing and other features for simplicity
@@ -697,7 +712,7 @@ class Step1X3DGeometryPipeline(DiffusionPipeline):
         vertices, faces = trimesh.voxel.ops.matrix_to_marching_cubes(decoded.cpu().numpy()[0, 0])
         mesh = trimesh.Trimesh(vertices, faces)
 
-        with NamedTemporaryFile(delete=False, suffix=".ply", dir="/home/hpadmin/HPE-Step1X-3D/output") as tmp:
+        with NamedTemporaryFile(delete=False, suffix=".ply", dir=OUTPUT_DIR) as tmp:
             mesh.export(tmp.name)
             return tmp.name
 
